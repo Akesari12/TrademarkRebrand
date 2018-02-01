@@ -1,0 +1,129 @@
+---
+title: "Trademark Report Aug 30"
+author: "Aniket Kesari"
+date: "August 30, 2017"
+output: pdf_document
+---
+
+# Overview
+
+This report details the findings from plotting time series plots of the frequencies of trademark rebranding. The two datasets detailed here are the Frequency Table drawn from the full dataset (approximately 8 million observations), and a smaller dataset using only companies that appeared in the SEC file (approximately 50,000 observations). 
+
+
+I found two general findings that motivate further exploration. First, in both the full dataset and the sample data, there is evidence that the number of instances of prior registrations grows quickly throughout the Information Age. Second, this growth is not constant, and instead spikes suddenly around the year 1975. I suspsect there was a change in the way the USPTO measured or collected this data around that time, or some change in the trademarking legal regime that caused more people and corporations to register rebranded marks. That being said, the sudden spike in 1975 does not explain why the pace of growth continued to grow in the years since then, instead of flattening out.
+
+One note about the SEC data: for some reason, filing dates and registration are missing after 1995 or so. However, records of company trademarks still appear, but do not have dates attached to them. This suggests that we need to match the trademark serial numbers to the dates that they were filed, and investigate the reasons as to why that information was missing from the USPTO's dataset in the first place. I don't think this is fatal - it suggests there was some systematic change in recording (possibly just for corporations?). I suspect that the bulk of these missing dates came after 1995 as the missing info far outnumbers the given info, which comports with our overall findings that rates of rebranding dramatically increased in the last 20-30 years.
+
+# Full Dataset
+
+As mentioned earlier, the key finding from the data is that starting in 1975, there was a rapid acceleration in re-registering corporate trademarks. Here I present a few rows from the overall data to illustrate the underlying data structure, and then present graphs of the trend for one through ten prior registrations.
+
+## Data Preview
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readr)
+setwd("C:/Users/Anike/Dropbox/Trademark Rebrand Project")
+FreqTable <- read.csv("Frequency Table of Prior Marks by Year.csv")
+MatchedTrademarks <- read_csv("SEC Trademarks 1884-2017.csv")
+
+FreqTable %>% sample_n(10, replace=TRUE, set.seed(12345))
+```
+
+Here, the proper way to read the table (full table available in Dropbox and e-mail), is that each row represents a unique Year and Number of Prior Registrations combination, and "n" represents the count. So for instance, in the year 2015, there were 218,024 instances of trademarks that had one prior mark. Similarly, in 1999, there were 272 instances of trademarks that had 17 prior registrations. 
+
+## Graphs
+
+The table view of the data suggest growth in the number of trademarks, and generally trademarks with many previous marks become more common over time. This because clearly visualized in the following graphs:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+OnePrior <- FreqTable %>%
+              filter(prior_regs == 1) %>%
+              ggplot() + geom_point(aes(x=Year, y=n)) + ggtitle("Instances of One Prior Registration Over Time") + xlab("Year") + ylab("Number of Instances") + geom_vline(xintercept=1975)
+
+OnetoThree <- FreqTable %>%
+                filter(prior_regs < 4) %>%
+                ggplot() + geom_point(aes(x=Year, y=n)) + facet_wrap(~prior_regs) + ggtitle("Instances of One, Two, and Three Prior Registrations Over Time") + xlab("Year") + ylab("Number of Instances") + geom_vline(xintercept=1975)
+
+FourtoTwelve <- FreqTable %>%
+                filter(prior_regs > 3 & prior_regs < 13) %>%
+                ggplot() + geom_point(aes(x=Year, y=n)) + facet_wrap(~prior_regs) + ggtitle("Instances of 4-12 Prior Registrations Over Time") + xlab("Year") + ylab("Number of Instances") + geom_vline(xintercept = 1975)
+
+OnePrior
+OnetoThree
+FourtoTwelve
+```
+
+The clear trend that emerges from these graphs is that growth in trademark registration grows explosively around 1975 and continues into the present. I have added a vertical line to each graph to visualize the cut point.
+
+# SEC Data
+
+## Data Preview
+
+I matched the full dataset to the companies that appear in the SEC dataset. Overall, there were about 700 unique companies (out of about 8000 SEC companies) that appeared in the full dataset, keeping in mind that I only matched to company names that had a maximum Levenshtein distance of "1" (meaning only one deletion, addition, or substitition). After tidying the data into the same format as the frequency table, I found a similar trend as with the full data. However, as mentioned earlier, there is a substantial amount of missing data after the mid-1990s, suggesting there was a systematic change in the way USPTO recorded these trademarks that we need to investigate. Here is a sample of the data, with the larger dataframe in dropbox and attached by e-mail:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+MatchedTrademarks$filing_dt <- as.Date(MatchedTrademarks$filing_dt, format="%Y-%m-%d")
+MatchedTrademarks$registration_dt <- as.Date(MatchedTrademarks$registration_dt, format="%Y-%m-%d")
+MatchedTrademarks$Year <- format(MatchedTrademarks$filing_dt, format="%Y")
+MatchedTrademarks$Year <- as.numeric(MatchedTrademarks$Year)
+
+MatchedFreqTable <- MatchedTrademarks %>%
+                      drop_na(Year) %>%
+                      count(Year, prior_regs) %>%
+                      mutate(prop = prop.table(n))
+
+MatchedFreqTable %>% sample_n(10, replace=TRUE, set.seed(12345))
+```
+## Graphs
+
+As with the full data, I created graphs using just the SEC data. As with the larger dataset, the SEC companies had the same tendency to suddenly start registering more trademarks after 1975. The missing data makes it impossible to tell if the trend continue past the 1990s, but up until that point, it certainly moved in that direction. The trend becomes discintly less noticeable once we start looking at more than 4 prior registrations, as it does with the full data. But the steep slope is encouraging nonetheless, and I suspect after we figure out the missing data problem, it will look a lot clearer.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+MatchOnePrior <- MatchedFreqTable %>%
+                      filter(prior_regs == 1) %>%
+                      ggplot() + geom_point(aes(x=Year, y=n)) + facet_wrap(~prior_regs) + ggtitle("Instances of One Prior Registration Over Time in SEC Data") + xlab("Year") + ylab("Number of Instances") + geom_vline(xintercept = 1975)
+
+MatchOnetoThree <- MatchedFreqTable %>%
+                      filter(prior_regs < 4) %>%
+                      ggplot() + geom_point(aes(x=Year, y=n)) + facet_wrap(~prior_regs) + ggtitle("Instances of One, Two, and Three Prior Registrations Over Time in SEC Data") + xlab("Year") + ylab("Number of Instances") + geom_vline(xintercept = 1975)
+
+MatchFourtoTwelve <- MatchedFreqTable %>%
+                      filter(prior_regs > 3 & prior_regs < 13) %>%
+                      ggplot() + geom_point(aes(x=Year, y=n)) + facet_wrap(~prior_regs) + ggtitle("Instances of 4-12 Prior Registration Over Time in SEC Data") + xlab("Year") + ylab("Number of Instances") + geom_vline(xintercept = 1975)
+
+MatchOnePrior
+MatchOnetoThree
+MatchFourtoTwelve
+```
+
+# Summaries by Company
+
+Finally, I constructed a dataset that gives summaries for each company. This process necessarily loses some information in the translation process, but may be helpful for further work distinguishing companies by type, age, etc. Here I provide measures of each company's average number of trademark registrations from 1900-2017, and average number of trademark registrations from 1975 - 2017. I also suggest that we come up with a measure for how often companies rebrand more than once.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+CompanySummary <-MatchedTrademarks %>%
+                    group_by(own_name) %>%
+                    summarise(avgperyear = n_distinct(serial_no)/n_distinct(Year)) 
+
+CompanySummarypost1975 <- MatchedTrademarks %>%
+                    filter(Year > 1974) %>%
+                    group_by(own_name) %>%
+                    summarise(avgpost1975 = n_distinct(serial_no)/n_distinct(Year))
+
+CompanySummary <- CompanySummary %>% full_join(CompanySummarypost1975, by="own_name")
+
+CompanySummary %>% sample_n(10, replace=TRUE, set.seed(12345))
+```
+
+# Conclusion + Next Steps
+
+Overall, the most striking finding was the rapid pace of growth in trademark rebrand grequency post-1975. This trend is most clear for trademarks with fewer than four prior marks, but there is also a clear growth in trademarks with several dozen prior marks. In terms of next steps, here are my suggestions:
+
+1. Investigate the reason for missing dates for corporate trademarks.
+
+2. Come up with a plausible story (possible a change in legal regime) that explains the post-1975 change in registration rates.
+
+3. Join the company summary data to Christine's data about firm characteristics. This information should give us covariates for model specification. Depending on the reason for the post-1975 growth, I think a regression discontinuity design model will be appropriate.
+
+Once these three steps are taken, I think we will be on track to have interesting findings, and learn a bit about what characteristics are associated with rebranding.

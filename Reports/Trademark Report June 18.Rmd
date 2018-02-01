@@ -1,0 +1,104 @@
+---
+title: "Trademark Rebrand Report June 16"
+author: "Aniket Kesari"
+date: "June 16, 2017"
+output: html_document
+---
+
+# Full Dataset
+
+The following code constructs the full dataset by sampling the 8 million observations four times (2 million observations in each set)
+
+```{r}
+# Load necessary packages
+library(tidyverse)
+# Set working directory
+setwd("C:/Users/Owner/Dropbox/Trademark Rebrand Project")
+memory.limit(size = 35000)
+
+# Owner files
+owner_file1 <- read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/owner.csv/owner.csv", nrow=2000000)
+owner_file2 <- read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/owner.csv/owner.csv", skip=2000000, nrow=2000000)
+owner_file3 <- read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/owner.csv/owner.csv", skip=4000000, nrow=2000000)
+
+owner_file <- owner_file1 %>%
+              bind_rows(owner_file2, owner_file3) %>% 
+              select(own_addr_1, own_addr_2, own_addr_city, own_entity_cd, own_composed_of, own_addr_country_cd, own_altn_name, own_name, own_type_cd, own_addr_postal, own_id, serial_no)
+
+rm(owner_file1, owner_file2, owner_file3)
+
+# Prior Mark file
+prior_mark <- read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/prior_mark.csv/prior_mark.csv")
+
+# Case files
+
+# Extract column names for the second-fourth subsets
+headers <- names(read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/case_file.csv/case_file.csv",nrows=1))
+
+case_file1 <- read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/case_file.csv/case_file.csv", nrow=2000000)
+
+new_file1 <- case_file1 %>%
+                select(serial_no, ir_auto_reg_dt, filing_dt, registration_dt, related_other_in) %>%
+                # Merge Prior Mark data in, matching by "serial number" and retain all values
+                full_join(prior_mark, by="serial_no") %>%
+                # Merge Owner data in, matching by "serial number" and retain all values
+                full_join(owner_file, by="serial_no") %>%
+                group_by(serial_no) %>% # Group observations by serial number
+                # Add a new column with the number of prior marks for each serial number
+                mutate(prior_regs = n_distinct(prior_no)) 
+
+rm(case_file1)
+
+case_file2 <- read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/case_file.csv/case_file.csv", header=F, col.names=headers, skip=2000000, nrow=2000000)
+
+new_file2 <- case_file2 %>%
+                select(serial_no, ir_auto_reg_dt, filing_dt, registration_dt, related_other_in) %>%
+                # Merge Prior Mark data in, matching by "serial number" and retain all values
+                full_join(prior_mark, by="serial_no") %>%
+                # Merge Owner data in, matching by "serial number" and retain all values
+                full_join(owner_file, by="serial_no") %>% 
+                group_by(serial_no) %>% 
+                mutate(prior_regs = n_distinct(prior_no)) 
+
+rm(case_file2)
+
+case_file3 <- read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/case_file.csv/case_file.csv", header=F, col.names=headers, skip=4000000, nrow=2000000)
+
+new_file3 <- case_file3 %>%
+                select(serial_no, ir_auto_reg_dt, filing_dt, registration_dt, related_other_in) %>%
+                # Merge Prior Mark data in, matching by "serial number" and retain all values
+                full_join(prior_mark, by="serial_no") %>%
+                # Merge Owner data in, matching by "serial number" and retain all values
+                full_join(owner_file, by="serial_no") %>% 
+                group_by(serial_no) %>% 
+                mutate(prior_regs = n_distinct(prior_no)) 
+
+rm(case_file3)
+
+case_file4 <- read.csv("C:/Users/Owner/Dropbox/Trademark Rebrand Project/case_file.csv/case_file.csv", header=F, col.names=headers, skip=6000000, nrow=2000000)
+
+new_file4 <- case_file4 %>%
+                select(serial_no, ir_auto_reg_dt, filing_dt, registration_dt, related_other_in) %>%
+                # Merge Prior Mark data in, matching by "serial number" and retain all values
+                full_join(prior_mark, by="serial_no") %>%
+                # Merge Owner data in, matching by "serial number" and retain all values
+                full_join(owner_file, by="serial_no") %>% 
+                group_by(serial_no) %>% 
+                mutate(prior_regs = n_distinct(prior_no)) 
+
+rm(case_file4)
+
+new_case_file <- new_file1 %>%
+                  bind_rows(new_file2, new_file3, new_file4)
+
+rm(new_file1, new_file2, new_file3, new_file4, owner_file, prior_mark)
+
+library(data.table)
+
+fwrite(new_case_file, "Trademarks 1884-2017.csv")
+
+new_case_file2 <- new_case_file %>%
+                  select(serial_no, filing_dt, registration_dt, own_name, own_entity_cd, own_type_cd, own_addr_postal, own_id, prior_regs)
+
+fwrite(new_case_file2, "Trademarks 1884-2017 (Reduced).csv")
+```

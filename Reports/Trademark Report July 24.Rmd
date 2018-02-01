@@ -1,0 +1,76 @@
+---
+title: "Trademark Report July 24"
+author: "Aniket Kesari"
+date: "July 24, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Data Source
+
+Based on the Trademarks Database, I constructed a new dataset that has information about the number of instances for each level of number of prior registration, per year. So, for example, this dataset tells us that in the year 1884, there were 8 instances of registered trademarks having 1 prior registration. Here I display the first 20 lines of the dataset to give an idea of its structure. "Year" refers to the calendar year, "prior_regs" refers to the number of prior registrations a trademark had, "n" is the number of instances, and "prop" is the relative frequency of per year. 
+
+```{r, warning=FALSE, message=FALSE}
+setwd("C:/Users/Owner/Dropbox/Trademark Rebrand Project")
+library(tidyverse)
+TrademarkFreq <- read_csv("Frequency Table of Prior Marks by Year.csv")
+head(TrademarkFreq, n=20)
+```
+
+# Descriptive Statistics 
+
+Here are descriptive statistics for the entire dataset. The summary divides each column into minimum, 1st quantile, Median, Mean, 3rd Quantile, and Maximum. Both the prior registration (prior_regs) and number of instances (n) have extreme observations, making the Mean a poor measure in this case.  
+
+```{r}
+print(summary(TrademarkFreq))
+```
+
+Dividing the dataset to pre- and post-1989:
+```{r}
+# Pre-1989
+TrademarkFreq %>%
+  filter(Year <= 1989) %>%
+  summary()
+
+# Post-1989
+TrademarkFreq %>%
+  filter(Year >= 1989) %>%
+  summary()
+```
+
+The summary statistics clearly reveal that the number of instances of Trademarks having prior registrations was much higher in the nearly 30 years since 1989 than in the 100 years before that. There are also clearly some extreme outliers in the number of prior registrations as the median is 6 pre-1989 and 17 post-1989, with maxes of 57 and 121 respectively. A cursory look at the data indicates that for any given year, trademarks with one prior registration make up the bulk of registrations. 
+
+To visualize the distribution of the number of prior registrations by here, consult this Scatterplot:
+
+![Scatterplot of Prior Registrations by Year](Scatter Plot All.jpg)
+
+# Growth in Trademark Registrations
+
+Now, to visualize the growth:
+
+```{r}
+# All observations
+TrademarkFreq %>% ggplot() + geom_line(aes(x=Year, y=n, colour=prior_regs, group=prior_regs)) + xlab("Year") + ylab("Number of Instances of Prior Registrations") + ggtitle("Line Graph of All Data")
+
+# Take out extreme number of prior registrations (75th percentile)
+TrademarkFreq %>% filter(prior_regs < 20) %>% ggplot() + geom_line(aes(x=Year, y=n, colour=prior_regs, group=prior_regs)) + xlab("Year") + ylab("Number of Instances of Prior Registrations") + ggtitle("Line Graph Without Extreme Values of Prior Registrations")
+
+# Take out extreme number of instances (n = 300,000)
+TrademarkFreq %>% filter(n < 100000) %>% ggplot() + geom_line(aes(x=Year, y=n, colour=prior_regs, group=prior_regs)) + xlab("Year") + ylab("Number of Instances of Prior Registrations") + ggtitle("Line Graph Without Extreme Values of Number of Instances")
+
+# Faceted for prior registrations = 1
+TrademarkFreq %>% filter(prior_regs == 1) %>% ggplot() + geom_line(aes(x=Year, y=n, group=1)) + facet_wrap(~prior_regs) + xlab("Year") + ylab("Number of Instances of Prior Registrations") + ggtitle("Line Graph for Prior Registration = 1")
+
+# Faceted by 1 < prior registrations < 11
+TrademarkFreq %>% filter(prior_regs > 1 & prior_regs < 11) %>% ggplot() + geom_line(aes(x=Year, y=n, group=1)) + xlab("Year") + ylab("Number of Instances of Prior Registrations") + ggtitle("Line Graph for Prior Registrations Greater than 1 and Less than 10") + facet_wrap(~prior_regs) 
+
+# Faceted by 10 < prior registrations < 31
+TrademarkFreq %>% filter(prior_regs > 10 & prior_regs < 31) %>% ggplot() + geom_line(aes(x=Year, y=n, group=1)) + xlab("Year") + ylab("Number of Instances of Prior Registrations") + ggtitle("Line Graph for Prior Registrations Greater than 10 and less than 31") + facet_wrap(~prior_regs)
+```
+
+Unsurprisingly, these visualizations generally indicate that the number of trademarks with one prior registration has increased by a large magnitude, with smaller effects as the number of prior registrations grows. That being said, there is generally support for the idea that the number of trademarks with prior registrations has vastly increased over time, with a major spike since 1989 (roughly coinciding with the widespread adoption of technology like cable television, the Internet, etc.)
+
+# Next Steps
+
+These descriptive statistics lend support to the idea that the number of trademark re-brands has increased over time, with a huge increase since 1989. In terms of next steps, we should think about how to better conceptualize the effect of different media forms on the need to rebrand. Otherwise, we still need to fuzzy string match between the SEC list (~8000 observations) and the larger Trademarks dataset to get a better handle on large corporate rebranding.

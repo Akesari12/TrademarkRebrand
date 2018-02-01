@@ -1,0 +1,80 @@
+---
+title: "Trademark Report Nov 17th"
+author: "Aniket Kesari"
+date: "November 17, 2017"
+output: pdf_document
+---
+
+# Introduction
+
+This report summarizes our quantitative findings on Trademark rebranding so far. It proceeds as follows: Section 2 gives a brief overview of the problem space, Section 3 describes the data sources, Section 4 describes the statistical methodology, Section 5 discusses preliminary results, and Section 6 Concludes.
+
+# Problem Space
+
+The fundamental question we are interested in assessing is whether rates of corporate rebranding have increased over time, and if so, whether that rise can be attributed to the pressures of competing in the Information Age. We use trademark registrations as a proxy to measure rebranding efforts. The advantage of this approach is that there is rich time-series data available, and it captures the most public-facing rebranding efforts. Ordinarily, trademarks are valid for 10 years. Using this benchmark, we are interested in seeing whether corporations re-register their trademarks *before* expiration, thus indicating a rebrand rather than a manuever to guarantee legal protection.
+
+# Data
+
+Our primary source for raw outcome data (number of trademark applications and rebrands) from the United States Patent and Trademark Office's (USPTO) Trademark Database. This database records information about trademarks registered since 1884. The records are not totally complete as some marks (especially from earlier in the 20th century) are missing address, registrant, and other critical information. We joined this dataset to the USPTO's supplementary dataset on "prior marks." This dataset is useful because it records the number of times a trademark has been re-registered. We processed and cleaned both of these datasets and joined them together to create a dataset with trademark information as well as the number of times it has been registered before.
+
+This first dataset contains data for all trademarks, both corporate and individual. Because we are primarily concerned with corporate rebranding, we subsetted the USPTO data by matching it to a dataset from the Securities and Exchange Commission (SEC). Unfortunately, the USPTO records on registrant names are not consistent because they are self reported. Because there are around 8 million observations in the Trademark dataset, manually matching trademark registrants to their SEC names is prohibitive. Instead, we employed a Levenshtein Distance based matching algorithm. Following this procedure, we generated a sample of approximately 500 SEC companies.
+
+# Statistical Methodology
+
+To analyze our data, we will employ an panel analysis.
+
+# Preliminary Results
+
+## Quantitative Results
+
+As detailed in previous reports, our initial results support the notion that trademark registrations have increased in frequency over time, as well as the rate of rebranding. Over time, the number of trademarks that were renewed increased dramatically. In the August 30th report, we saw that not only has the number of renewed trademarks increased over time, but also the frequency of those renewals. This trend is summarized in the plot below:
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readr)
+setwd("C:/Users/Anike/Dropbox/Trademark Rebrand Project")
+FreqTable <- read_csv("C:/Users/Anike/Dropbox/Trademark Rebrand Project/Processed Data/Frequency Table of Prior Marks by Year.csv")
+
+FreqTable %>%
+              filter(prior_regs == 1) %>%
+              ggplot() + geom_point(aes(x=Year, y=n)) + ggtitle("Instances of One Prior Registration Over Time") + xlab("Year") + ylab("Number of Instances") + geom_vline(xintercept = 1975)
+```
+## Post-1975 Bump
+
+One of the most interesting visual findings was that there was a notable jump in the rate of prior registrations after 1975. This relationship can be seen in the plot below:
+
+We explored the reasons as to why this jump occurred. After consulting with the USPTO, we discovered that the U.S. Trademark regime underwent significant changes in the early 1970s. In particular, in the 1970s the U.S. came into compliance with international treaty law. Through its treaty implementation, several things happened:
+
+1. The USPTO hired extra examiners and trained attorneys in anticipation of the partial shift from the national classification system to the international classification system. This may have been done to clear the application backlog.
+2. The Treaty implementation allowed foreigners to file trademarks under a "first to file" rather than a "first to use" system. U.S. companies needed to demonstrate that they actually used their trademarks, whereas foreign companies would not have to show use in the U.S. to get legal protection.
+
+I dug a little further, and found the relevant portion of the "Trademark Manual of Examining Procedure." (available here: https://tmep.uspto.gov/RDMS/TMEP/current#/current/TMEP-1400d1e1.html)
+
+Section 1401.2 reads: "As of September 1, 1973, the international classification of goods and services is the controlling classification used by the United States, and it applies to all applications filed on or after September 1, 1973, and their resulting registrations, for all statutory purposes.   See 37 C.F.R. §2.85(a).  Unless otherwise indicated, references in this manual to class refer to the international class.
+Prior to September 1, 1973, the United States used its own classification of goods and services, which is different from the international classification.  The prior United States classification continues to govern for all statutory purposes for trademark applications filed on or before August 31, 1973, and all registrations issued on the basis of an application filed on or before August 31, 1973, unless the owner of the registration amends the registration to adopt international classification.  37 C.F.R. §2.85(b)."
+
+Because the international system uses a "first-to-file" system, rather than a "first-to-use" system, I suspect this created a strong incentive to immediately register a trademark with the USPTO once it was formulated. Because there was no requirement to actually use a trademark, this creates a strong incentive to file a trademark early because one could enjoy the associated protections without exercising much effort. Note that this change is distinct from the U.S. fully joining the international Madrid System in 2003, which standardized trademark registration applications across World Intellectual Property Organization (WIPO) states.
+
+# Next Steps
+
+## Trademark Data Products Dataset
+
+One central question that is *not* answered by the data we have now is *why* companies reregister their trademarks. Luckily, the USPTO has made its "Trademark Data Products" dataset available, which contains both .jpg and .xml text file copies of every trademark application. From what I can see, these applications *do* include serial numbers, which means we can match them to our dataset. 
+
+After doing that, the next step would be to use text analysis to uncover the reasons why rebrands occur. I still need to dig in a little deeper to develop the exact analytical strategy, but my hunch is that an algorithm will:
+
+1. Identify the "Declaration of Renewal" section of the trademark application
+2. Classify the "reason" into a "rebrand" or "other reason."
+
+For step 2, we will need to examine the documents to determine if there are any words or strings that are strongly associated with "rebranding" rather than other reasons for renewal. Once we do this, we can employ a dictionary method algorithm to classify the documents based on the reason for renewal, and report the relevant statistics.
+
+## Merge with Panel Data
+
+The other major step is to merge the Trademarks dataset with the panel data with company characteristics. Once these are merged, regression analysis that aims to estimate the effect of various company characteristics on rebranding rates can be undertaken.
+
+# Conclusion
+
+The major takeaways from our research so far is that rebranding has increased both absolutely and relatively over time. This trend holds both in the general dataset, as well as the SEC data on its own. The next steps will be to get more details on why these rebrands are happening, using both the text of the applications and the company characteristics.
+
+
